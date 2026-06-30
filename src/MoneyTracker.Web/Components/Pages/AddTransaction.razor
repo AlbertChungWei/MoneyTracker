@@ -1,0 +1,192 @@
+@page "/add"
+@page "/edit/{Id:int}"
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+@inject ITransactionService TransactionService
+@inject ICategoryService CategoryService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<PageTitle>@(_isEditMode ? "編輯收支" : "新增收支")</PageTitle>
+
+<h1 class="mb-4">@(_isEditMode ? "編輯收支" : "新增收支")</h1>
+
+@if (_isLoading)
+{
+    <p>載入中...</p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-6">
+            <EditForm Model="_model" OnValidSubmit="HandleSubmit">
+                <DataAnnotationsValidator />
+
+                <div class="mb-3">
+                    <label class="form-label">類型</label>
+                    <div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" id="typeIncome"
+                                   value="@TransactionType.Income"
+                                   checked="@(_model.Type == TransactionType.Income)"
+                                   @onchange="() => OnTypeChanged(TransactionType.Income)" />
+                            <label class="form-check-label text-success" for="typeIncome">收入</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" id="typeExpense"
+                                   value="@TransactionType.Expense"
+                                   checked="@(_model.Type == TransactionType.Expense)"
+                                   @onchange="() => OnTypeChanged(TransactionType.Expense)" />
+                            <label class="form-check-label text-danger" for="typeExpense">支出</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">金額</label>
+                    <InputNumber class="form-control" @bind-Value="_model.Amount" />
+                    <ValidationMessage For="() => _model.Amount" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">日期</label>
+                    <InputDate class="form-control" @bind-Value="_model.Date" />
+                    <ValidationMessage For="() => _model.Date" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">類別</label>
+                    <InputSelect class="form-select" @bind-Value="_model.CategoryId">
+                        <option value="0">— 請選擇 —</option>
+                        @foreach (var c in _filteredCategories)
+                        {
+                            <option value="@c.Id">@c.Name</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => _model.CategoryId" />
+                    @if (_filteredCategories.Count == 0)
+                    {
+                        <div class="form-text text-warning">
+                            此類型尚無類別，請先至「類別管理」新增。
+                        </div>
+                    }
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">說明（選填）</label>
+                    <InputText class="form-control" @bind-Value="_model.Description" />
+                    <ValidationMessage For="() => _model.Description" />
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">儲存</button>
+                    <a href="/transactions" class="btn btn-outline-secondary">取消</a>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private TransactionFormModel _model = new();
+    private List<Category> _allCategories = [];
+    private List<Category> _filteredCategories = [];
+    private bool _isLoading = true;
+    private bool _isEditMode => Id.HasValue;
+    private string _userId = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _userId = authState.User.FindFirst(
+            System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+
+        _allCategories = await CategoryService.GetByUserAsync(_userId);
+
+        if (_isEditMode && Id.HasValue)
+        {
+            var existing = await TransactionService.GetByIdAsync(Id.Value, _userId);
+            if (existing is not null)
+            {
+                _model = new TransactionFormModel
+                {
+                    Amount = existing.Amount,
+                    Description = existing.Description,
+                    Date = existing.Date,
+                    Type = existing.Type,
+                    CategoryId = existing.CategoryId
+                };
+            }
+        }
+
+        FilterCategories();
+        _isLoading = false;
+    }
+
+    private void OnTypeChanged(TransactionType type)
+    {
+        _model.Type = type;
+        _model.CategoryId = 0;
+        FilterCategories();
+    }
+
+    private void FilterCategories()
+    {
+        _filteredCategories = _allCategories
+            .Where(c => c.Type == _model.Type)
+            .ToList();
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (_isEditMode && Id.HasValue)
+        {
+            var existing = await TransactionService.GetByIdAsync(Id.Value, _userId);
+            if (existing is not null)
+            {
+                existing.Amount = _model.Amount;
+                existing.Description = _model.Description;
+                existing.Date = _model.Date;
+                existing.Type = _model.Type;
+                existing.CategoryId = _model.CategoryId;
+                await TransactionService.UpdateAsync(existing);
+            }
+        }
+        else
+        {
+            var transaction = new Transaction
+            {
+                Amount = _model.Amount,
+                Description = _model.Description,
+                Date = _model.Date,
+                Type = _model.Type,
+                CategoryId = _model.CategoryId,
+                UserId = _userId
+            };
+            await TransactionService.CreateAsync(transaction);
+        }
+
+        Navigation.NavigateTo("/transactions");
+    }
+
+    private class TransactionFormModel
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.Range(0.01, double.MaxValue, ErrorMessage = "金額必須大於 0")]
+        public decimal Amount { get; set; }
+
+        [System.ComponentModel.DataAnnotations.MaxLength(200)]
+        public string? Description { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public DateTime Date { get; set; } = DateTime.Today;
+
+        public TransactionType Type { get; set; } = TransactionType.Expense;
+
+        [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue, ErrorMessage = "請選擇類別")]
+        public int CategoryId { get; set; }
+    }
+}

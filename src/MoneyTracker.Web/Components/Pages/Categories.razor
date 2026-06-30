@@ -1,0 +1,176 @@
+@page "/categories"
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+@inject ICategoryService CategoryService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>類別管理</PageTitle>
+
+<h1 class="mb-4">類別管理</h1>
+
+<div class="row g-4">
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title mb-3">新增類別</h5>
+                <EditForm Model="_form" OnValidSubmit="AddCategory">
+                    <DataAnnotationsValidator />
+
+                    <div class="mb-3">
+                        <label class="form-label">類型</label>
+                        <div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" id="fIncome"
+                                       checked="@(_form.Type == TransactionType.Income)"
+                                       @onchange="() => _form.Type = TransactionType.Income" />
+                                <label class="form-check-label text-success" for="fIncome">收入</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" id="fExpense"
+                                       checked="@(_form.Type == TransactionType.Expense)"
+                                       @onchange="() => _form.Type = TransactionType.Expense" />
+                                <label class="form-check-label text-danger" for="fExpense">支出</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">名稱</label>
+                        <InputText class="form-control" @bind-Value="_form.Name" placeholder="例：餐飲、薪資" />
+                        <ValidationMessage For="() => _form.Name" />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">新增</button>
+                </EditForm>
+
+                @if (!string.IsNullOrEmpty(_message))
+                {
+                    <div class="alert alert-success mt-3 py-2">@_message</div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title mb-3">收入類別</h5>
+                @if (_incomeCategories.Count == 0)
+                {
+                    <p class="text-muted small">尚無收入類別</p>
+                }
+                else
+                {
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        @foreach (var c in _incomeCategories)
+                        {
+                            <span class="badge bg-success-subtle text-success-emphasis fs-6 d-flex align-items-center gap-1 px-3 py-2">
+                                @c.Name
+                                <button class="btn-close btn-close-sm ms-1" style="font-size:0.6rem"
+                                        @onclick="() => ConfirmDelete(c)" title="刪除"></button>
+                            </span>
+                        }
+                    </div>
+                }
+
+                <h5 class="card-title mb-3 mt-2">支出類別</h5>
+                @if (_expenseCategories.Count == 0)
+                {
+                    <p class="text-muted small">尚無支出類別</p>
+                }
+                else
+                {
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var c in _expenseCategories)
+                        {
+                            <span class="badge bg-danger-subtle text-danger-emphasis fs-6 d-flex align-items-center gap-1 px-3 py-2">
+                                @c.Name
+                                <button class="btn-close btn-close-sm ms-1" style="font-size:0.6rem"
+                                        @onclick="() => ConfirmDelete(c)" title="刪除"></button>
+                            </span>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (_confirmTarget is not null)
+{
+    <div class="modal d-block" tabindex="-1" style="background:rgba(0,0,0,0.4)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">確認刪除</h5>
+                </div>
+                <div class="modal-body">
+                    確定要刪除類別「@_confirmTarget.Name」嗎？
+                    <div class="text-muted small mt-1">已使用此類別的記錄不受影響。</div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => _confirmTarget = null">取消</button>
+                    <button class="btn btn-danger" @onclick="ExecuteDelete">確認刪除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Category> _incomeCategories = [];
+    private List<Category> _expenseCategories = [];
+    private CategoryForm _form = new();
+    private Category? _confirmTarget;
+    private string _message = string.Empty;
+    private string _userId = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _userId = authState.User.FindFirst(
+            System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+        await LoadCategories();
+    }
+
+    private async Task LoadCategories()
+    {
+        var all = await CategoryService.GetByUserAsync(_userId);
+        _incomeCategories = all.Where(c => c.Type == TransactionType.Income).ToList();
+        _expenseCategories = all.Where(c => c.Type == TransactionType.Expense).ToList();
+    }
+
+    private async Task AddCategory()
+    {
+        await CategoryService.CreateAsync(new Category
+        {
+            Name = _form.Name,
+            Type = _form.Type,
+            UserId = _userId
+        });
+        _message = $"「{_form.Name}」已新增";
+        _form = new CategoryForm { Type = _form.Type };
+        await LoadCategories();
+    }
+
+    private void ConfirmDelete(Category c) => _confirmTarget = c;
+
+    private async Task ExecuteDelete()
+    {
+        if (_confirmTarget is null) return;
+        await CategoryService.DeleteAsync(_confirmTarget.Id, _userId);
+        _confirmTarget = null;
+        _message = string.Empty;
+        await LoadCategories();
+    }
+
+    private class CategoryForm
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "請輸入名稱")]
+        [System.ComponentModel.DataAnnotations.MaxLength(50)]
+        public string Name { get; set; } = string.Empty;
+
+        public TransactionType Type { get; set; } = TransactionType.Expense;
+    }
+}

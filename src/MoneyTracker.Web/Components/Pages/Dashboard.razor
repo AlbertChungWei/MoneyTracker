@@ -1,0 +1,108 @@
+@page "/"
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+@inject ITransactionService TransactionService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Dashboard</PageTitle>
+
+<h1 class="mb-4">本月收支概覽</h1>
+
+@if (_isLoading)
+{
+    <p>載入中...</p>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <p class="text-muted mb-1">本月收入</p>
+                    <h3 class="text-success fw-bold">@_income.ToString("N0") 元</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <p class="text-muted mb-1">本月支出</p>
+                    <h3 class="text-danger fw-bold">@_expense.ToString("N0") 元</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <p class="text-muted mb-1">本月結餘</p>
+                    <h3 class="fw-bold @(_balance >= 0 ? "text-primary" : "text-danger")">
+                        @_balance.ToString("N0") 元
+                    </h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">最近 5 筆記錄</h5>
+        <a href="/add" class="btn btn-primary btn-sm">＋ 新增收支</a>
+    </div>
+
+    @if (_recent.Count == 0)
+    {
+        <p class="text-muted">尚無記錄，<a href="/add">立即新增</a>。</p>
+    }
+    else
+    {
+        <table class="table table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>日期</th>
+                    <th>類別</th>
+                    <th>說明</th>
+                    <th class="text-end">金額</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var t in _recent)
+                {
+                    <tr>
+                        <td>@t.Date.ToString("MM/dd")</td>
+                        <td>@t.Category.Name</td>
+                        <td>@t.Description</td>
+                        <td class="text-end @(t.Type == TransactionType.Income ? "text-success" : "text-danger")">
+                            @(t.Type == TransactionType.Income ? "+" : "-")@t.Amount.ToString("N0")
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <div class="text-end">
+            <a href="/transactions" class="btn btn-outline-secondary btn-sm">查看全部</a>
+        </div>
+    }
+}
+
+@code {
+    private decimal _income;
+    private decimal _expense;
+    private decimal _balance;
+    private List<Transaction> _recent = [];
+    private bool _isLoading = true;
+    private string _userId = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _userId = authState.User.FindFirst(
+            System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+
+        var now = DateTime.Now;
+        _income = await TransactionService.GetMonthlyIncomeAsync(_userId, now.Month, now.Year);
+        _expense = await TransactionService.GetMonthlyExpenseAsync(_userId, now.Month, now.Year);
+        _balance = _income - _expense;
+        _recent = await TransactionService.GetRecentAsync(_userId, 5);
+        _isLoading = false;
+    }
+}

@@ -1,0 +1,161 @@
+@page "/transactions"
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+@inject ITransactionService TransactionService
+@inject ICategoryService CategoryService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>我的帳本</PageTitle>
+
+<h1 class="mb-4">我的帳本</h1>
+
+<div class="row g-2 mb-3">
+    <div class="col-auto">
+        <select class="form-select" @bind="_selectedYear" @bind:after="LoadData">
+            @for (int y = DateTime.Now.Year; y >= DateTime.Now.Year - 3; y--)
+            {
+                <option value="@y">@y 年</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <select class="form-select" @bind="_selectedMonth" @bind:after="LoadData">
+            <option value="0">全部月份</option>
+            @for (int m = 1; m <= 12; m++)
+            {
+                <option value="@m">@m 月</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <select class="form-select" @bind="_selectedCategoryId" @bind:after="LoadData">
+            <option value="0">全部類別</option>
+            @foreach (var c in _categories)
+            {
+                <option value="@c.Id">@c.Name</option>
+            }
+        </select>
+    </div>
+    <div class="col-auto">
+        <a href="/add" class="btn btn-primary">＋ 新增收支</a>
+    </div>
+</div>
+
+@if (_isLoading)
+{
+    <p>載入中...</p>
+}
+else if (_transactions.Count == 0)
+{
+    <p class="text-muted">此條件沒有記錄。</p>
+}
+else
+{
+    <table class="table table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>日期</th>
+                <th>類別</th>
+                <th>說明</th>
+                <th class="text-end">金額</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var t in _transactions)
+            {
+                <tr>
+                    <td>@t.Date.ToString("yyyy/MM/dd")</td>
+                    <td>@t.Category.Name</td>
+                    <td>@t.Description</td>
+                    <td class="text-end @(t.Type == TransactionType.Income ? "text-success" : "text-danger")">
+                        @(t.Type == TransactionType.Income ? "+" : "-")@t.Amount.ToString("N0")
+                    </td>
+                    <td class="text-end text-nowrap">
+                        <a href="/edit/@t.Id" class="btn btn-outline-secondary btn-sm">編輯</a>
+                        <button class="btn btn-outline-danger btn-sm" @onclick="() => ConfirmDelete(t)">刪除</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+        <tfoot class="table-light fw-bold">
+            <tr>
+                <td colspan="3">小計</td>
+                <td class="text-end text-success">+@_totalIncome.ToString("N0")</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td colspan="3"></td>
+                <td class="text-end text-danger">-@_totalExpense.ToString("N0")</td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+}
+
+@if (_confirmTarget is not null)
+{
+    <div class="modal d-block" tabindex="-1" style="background:rgba(0,0,0,0.4)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">確認刪除</h5>
+                </div>
+                <div class="modal-body">
+                    確定要刪除「@_confirmTarget.Description」（@_confirmTarget.Amount.ToString("N0") 元）嗎？
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CancelDelete">取消</button>
+                    <button class="btn btn-danger" @onclick="ExecuteDelete">確認刪除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Transaction> _transactions = [];
+    private List<Category> _categories = [];
+    private bool _isLoading = true;
+    private string _userId = string.Empty;
+    private int _selectedYear = DateTime.Now.Year;
+    private int _selectedMonth = DateTime.Now.Month;
+    private int _selectedCategoryId = 0;
+    private Transaction? _confirmTarget;
+
+    private decimal _totalIncome => _transactions.Where(t => t.Type == TransactionType.Income).Sum(t => t.Amount);
+    private decimal _totalExpense => _transactions.Where(t => t.Type == TransactionType.Expense).Sum(t => t.Amount);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _userId = authState.User.FindFirst(
+            System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+        _categories = await CategoryService.GetByUserAsync(_userId);
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _isLoading = true;
+        _transactions = await TransactionService.GetByUserAsync(
+            _userId,
+            _selectedMonth == 0 ? null : _selectedMonth,
+            _selectedYear,
+            _selectedCategoryId == 0 ? null : _selectedCategoryId);
+        _isLoading = false;
+    }
+
+    private void ConfirmDelete(Transaction t) => _confirmTarget = t;
+
+    private void CancelDelete() => _confirmTarget = null;
+
+    private async Task ExecuteDelete()
+    {
+        if (_confirmTarget is null) return;
+        await TransactionService.DeleteAsync(_confirmTarget.Id, _userId);
+        _confirmTarget = null;
+        await LoadData();
+    }
+}
