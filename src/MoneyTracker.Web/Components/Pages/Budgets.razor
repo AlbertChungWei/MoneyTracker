@@ -1,0 +1,151 @@
+@page "/budgets"
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+@inject IBudgetService BudgetService
+@inject ICategoryService CategoryService
+@inject ITransactionService TransactionService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>預算管理</PageTitle>
+
+<h1 class="mb-2">預算管理</h1>
+<p class="text-muted mb-4">設定每月各類別的支出預算，即時追蹤消費狀況。</p>
+
+@if (_isLoading)
+{
+    <p>載入中...</p>
+}
+else if (_rows.Count == 0)
+{
+    <div class="alert alert-info">
+        尚未建立任何支出類別。請先至
+        <a href="/categories">類別管理</a> 建立類別。
+    </div>
+}
+else
+{
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">支出類別</th>
+                        <th style="width:200px">月預算 (元)</th>
+                        <th>本月已用</th>
+                        <th>使用率</th>
+                        <th class="pe-4" style="width:80px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _rows)
+                    {
+                        var pct = row.Budget > 0 ? (double)(row.Spent / row.Budget * 100) : 0;
+                        var clamp = Math.Min(pct, 100);
+                        var barClass = pct >= 100 ? "bg-danger" : pct >= 80 ? "bg-warning" : "bg-success";
+                        <tr>
+                            <td class="ps-4 align-middle fw-medium">@row.Category.Name</td>
+                            <td class="align-middle">
+                                <input type="number" class="form-control form-control-sm"
+                                       min="0" step="100"
+                                       @bind="row.InputAmount"
+                                       style="width:160px" />
+                            </td>
+                            <td class="align-middle text-danger fw-medium">
+                                @row.Spent.ToString("N0") 元
+                            </td>
+                            <td class="align-middle" style="min-width:180px">
+                                @if (row.Budget > 0)
+                                {
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress flex-grow-1" style="height:8px">
+                                            <div class="progress-bar @barClass" style="width:@clamp.ToString("F0")%"></div>
+                                        </div>
+                                        <small class="text-muted text-nowrap">@pct.ToString("F0")%</small>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <small class="text-muted">未設定</small>
+                                }
+                            </td>
+                            <td class="pe-4 align-middle">
+                                <button class="btn btn-sm btn-primary" @onclick="() => SaveBudget(row)">
+                                    儲存
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <p class="text-muted small mt-2">提示：預算設為 0 或清空可取消該類別的預算。</p>
+}
+
+@if (!string.IsNullOrEmpty(_message))
+{
+    <div class="alert alert-success alert-dismissible mt-3 fade show">
+        @_message
+        <button type="button" class="btn-close" @onclick="() => _message = string.Empty"></button>
+    </div>
+}
+
+@code {
+    private List<BudgetRow> _rows = [];
+    private bool _isLoading = true;
+    private string _userId = string.Empty;
+    private string _message = string.Empty;
+
+    private class BudgetRow
+    {
+        public Category Category { get; set; } = null!;
+        public int? BudgetId { get; set; }
+        public decimal Budget { get; set; }
+        public decimal Spent { get; set; }
+        public decimal InputAmount { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _userId = authState.User.FindFirst(
+            System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _isLoading = true;
+        var now = DateTime.Now;
+        var categories = await CategoryService.GetByUserAndTypeAsync(_userId, TransactionType.Expense);
+        var budgets = await BudgetService.GetByUserAsync(_userId);
+        var spending = await TransactionService.GetExpenseByCategoryAsync(_userId, now.Month, now.Year);
+        var spendingDict = spending.ToDictionary(x => x.CategoryId, x => x.Amount);
+
+        _rows = categories.Select(cat =>
+        {
+            var budget = budgets.FirstOrDefault(b => b.CategoryId == cat.Id);
+            return new BudgetRow
+            {
+                Category = cat,
+                BudgetId = budget?.Id,
+                Budget = budget?.Amount ?? 0,
+                Spent = spendingDict.GetValueOrDefault(cat.Id, 0m),
+                InputAmount = budget?.Amount ?? 0
+            };
+        }).ToList();
+
+        _isLoading = false;
+    }
+
+    private async Task SaveBudget(BudgetRow row)
+    {
+        if (row.InputAmount < 0) return;
+        await BudgetService.SetAsync(_userId, row.Category.Id, row.InputAmount);
+        row.Budget = row.InputAmount;
+        _message = row.InputAmount > 0
+            ? $"已儲存「{row.Category.Name}」月預算 {row.InputAmount:N0} 元"
+            : $"已移除「{row.Category.Name}」的預算設定";
+    }
+}

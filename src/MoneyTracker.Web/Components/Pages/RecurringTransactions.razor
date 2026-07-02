@@ -1,0 +1,267 @@
+@page "/recurring"
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+@inject IRecurringTransactionService RecurringService
+@inject ICategoryService CategoryService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>週期性收支</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <div>
+        <h1 class="mb-1">週期性收支</h1>
+        <p class="text-muted mb-0">設定固定收支項目，每月自動在 Dashboard 產生記錄。</p>
+    </div>
+    <button class="btn btn-success" @onclick="GenerateNow" disabled="@_isGenerating">
+        @(_isGenerating ? "產生中..." : "立即產生本月記錄")
+    </button>
+</div>
+
+@if (!string.IsNullOrEmpty(_message))
+{
+    <div class="alert alert-success alert-dismissible mt-3 fade show">
+        @_message
+        <button type="button" class="btn-close" @onclick="() => _message = string.Empty"></button>
+    </div>
+}
+
+<div class="row g-4 mt-1">
+    <div class="col-md-5">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white fw-medium">新增週期性收支</div>
+            <div class="card-body">
+                <EditForm Model="_form" OnValidSubmit="HandleAdd">
+                    <DataAnnotationsValidator />
+
+                    <div class="mb-3">
+                        <label class="form-label">類型</label>
+                        <div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" id="rTypeIncome"
+                                       checked="@(_form.Type == TransactionType.Income)"
+                                       @onchange="() => OnTypeChanged(TransactionType.Income)" />
+                                <label class="form-check-label text-success" for="rTypeIncome">收入</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" id="rTypeExpense"
+                                       checked="@(_form.Type == TransactionType.Expense)"
+                                       @onchange="() => OnTypeChanged(TransactionType.Expense)" />
+                                <label class="form-check-label text-danger" for="rTypeExpense">支出</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">金額</label>
+                        <InputNumber class="form-control" @bind-Value="_form.Amount" />
+                        <ValidationMessage For="() => _form.Amount" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">類別</label>
+                        <InputSelect class="form-select" @bind-Value="_form.CategoryId">
+                            <option value="0">— 請選擇 —</option>
+                            @foreach (var c in _filteredCategories)
+                            {
+                                <option value="@c.Id">@c.Name</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="() => _form.CategoryId" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">說明（選填）</label>
+                        <InputText class="form-control" @bind-Value="_form.Description" placeholder="例：薪資、房租" />
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">每月幾號產生</label>
+                        <InputNumber class="form-control" @bind-Value="_form.DayOfMonth" min="1" max="28" />
+                        <div class="form-text">最大為 28，避免 2 月問題</div>
+                        <ValidationMessage For="() => _form.DayOfMonth" />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">新增</button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white fw-medium">已設定的週期性項目</div>
+            @if (_isLoading)
+            {
+                <div class="card-body"><p class="text-muted">載入中...</p></div>
+            }
+            else if (_items.Count == 0)
+            {
+                <div class="card-body"><p class="text-muted">尚無週期性收支設定。</p></div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>說明</th>
+                                <th>類別</th>
+                                <th class="text-end">金額</th>
+                                <th class="text-center">每月</th>
+                                <th class="text-center">狀態</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in _items)
+                            {
+                                <tr class="@(item.IsActive ? "" : "text-muted")">
+                                    <td>@(item.Description ?? "—")</td>
+                                    <td>@item.Category.Name</td>
+                                    <td class="text-end @(item.Type == TransactionType.Income ? "text-success" : "text-danger")">
+                                        @(item.Type == TransactionType.Income ? "+" : "-")@item.Amount.ToString("N0")
+                                    </td>
+                                    <td class="text-center">@item.DayOfMonth 號</td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm @(item.IsActive ? "btn-success" : "btn-outline-secondary")"
+                                                @onclick="() => ToggleActive(item)">
+                                            @(item.IsActive ? "啟用" : "停用")
+                                        </button>
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-outline-danger btn-sm" @onclick="() => ConfirmDelete(item)">刪除</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@if (_confirmTarget is not null)
+{
+    <div class="modal d-block" tabindex="-1" style="background:rgba(0,0,0,0.4)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">確認刪除</h5>
+                </div>
+                <div class="modal-body">
+                    確定要刪除「@(_confirmTarget.Description ?? _confirmTarget.Category.Name)」嗎？
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => _confirmTarget = null">取消</button>
+                    <button class="btn btn-danger" @onclick="ExecuteDelete">確認刪除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<RecurringTransaction> _items = [];
+    private List<Category> _allCategories = [];
+    private List<Category> _filteredCategories = [];
+    private bool _isLoading = true;
+    private bool _isGenerating = false;
+    private string _userId = string.Empty;
+    private string _message = string.Empty;
+    private RecurringTransaction? _confirmTarget;
+
+    private FormModel _form = new();
+
+    private class FormModel
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.Range(0.01, double.MaxValue, ErrorMessage = "金額必須大於 0")]
+        public decimal Amount { get; set; }
+
+        [System.ComponentModel.DataAnnotations.MaxLength(200)]
+        public string? Description { get; set; }
+
+        public TransactionType Type { get; set; } = TransactionType.Expense;
+
+        [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue, ErrorMessage = "請選擇類別")]
+        public int CategoryId { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Range(1, 28, ErrorMessage = "日期須介於 1～28")]
+        public int DayOfMonth { get; set; } = 1;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _userId = authState.User.FindFirst(
+            System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+        _allCategories = await CategoryService.GetByUserAsync(_userId);
+        FilterCategories();
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _isLoading = true;
+        _items = await RecurringService.GetByUserAsync(_userId);
+        _isLoading = false;
+    }
+
+    private void OnTypeChanged(TransactionType type)
+    {
+        _form.Type = type;
+        _form.CategoryId = 0;
+        FilterCategories();
+    }
+
+    private void FilterCategories()
+    {
+        _filteredCategories = _allCategories.Where(c => c.Type == _form.Type).ToList();
+    }
+
+    private async Task HandleAdd()
+    {
+        var item = new RecurringTransaction
+        {
+            UserId = _userId,
+            CategoryId = _form.CategoryId,
+            Amount = _form.Amount,
+            Description = _form.Description,
+            Type = _form.Type,
+            DayOfMonth = _form.DayOfMonth,
+            IsActive = true
+        };
+        await RecurringService.CreateAsync(item);
+        _form = new FormModel();
+        FilterCategories();
+        await LoadData();
+    }
+
+    private async Task ToggleActive(RecurringTransaction item)
+    {
+        await RecurringService.ToggleActiveAsync(item.Id, _userId);
+        await LoadData();
+    }
+
+    private void ConfirmDelete(RecurringTransaction item) => _confirmTarget = item;
+
+    private async Task ExecuteDelete()
+    {
+        if (_confirmTarget is null) return;
+        await RecurringService.DeleteAsync(_confirmTarget.Id, _userId);
+        _confirmTarget = null;
+        await LoadData();
+    }
+
+    private async Task GenerateNow()
+    {
+        _isGenerating = true;
+        var count = await RecurringService.GenerateForCurrentMonthAsync(_userId);
+        _message = count > 0
+            ? $"成功產生 {count} 筆本月記錄。"
+            : "本月記錄已全部產生過，無需重複建立。";
+        _isGenerating = false;
+    }
+}

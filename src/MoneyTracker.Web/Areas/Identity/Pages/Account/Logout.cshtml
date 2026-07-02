@@ -1,0 +1,12 @@
+@page
+@model LogoutModel
+@{
+    ViewData["Title"] = "登出";
+}
+
+<h2 class="auth-title">已登出</h2>
+<p class="auth-subtitle">感謝使用 MoneyTracker</p>
+
+<a asp-page="./Login" class="btn-auth" style="display:block;text-align:center;text-decoration:none;padding:0.7rem;">
+    重新登入
+</a>

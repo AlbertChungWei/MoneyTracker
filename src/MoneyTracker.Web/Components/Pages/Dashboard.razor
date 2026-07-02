@@ -3,11 +3,38 @@
 @attribute [Authorize]
 
 @inject ITransactionService TransactionService
+@inject IBudgetService BudgetService
+@inject IRecurringTransactionService RecurringService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JS
 
 <PageTitle>Dashboard</PageTitle>
 
-<h1 class="mb-4">本月收支概覽</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">收支概覽</h1>
+    <div class="d-flex gap-2">
+        <select class="form-select form-select-sm" style="width:auto" @bind="_selectedYear" @bind:after="LoadData">
+            @for (int y = DateTime.Now.Year; y >= DateTime.Now.Year - 3; y--)
+            {
+                <option value="@y">@y 年</option>
+            }
+        </select>
+        <select class="form-select form-select-sm" style="width:auto" @bind="_selectedMonth" @bind:after="LoadData">
+            @for (int m = 1; m <= 12; m++)
+            {
+                <option value="@m">@m 月</option>
+            }
+        </select>
+    </div>
+</div>
+
+@if (_generatedCount > 0)
+{
+    <div class="alert alert-info alert-dismissible fade show mb-3">
+        已自動產生 @_generatedCount 筆本月週期性收支記錄。
+        <button type="button" class="btn-close" @onclick="() => _generatedCount = 0"></button>
+    </div>
+}
 
 @if (_isLoading)
 {
@@ -43,6 +70,61 @@ else
             </div>
         </div>
     </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-muted mb-3">本月支出類別</h6>
+                    @if (_expenseByCategory.Count == 0)
+                    {
+                        <p class="text-muted text-center py-4">本月尚無支出記錄</p>
+                    }
+                    else
+                    {
+                        <canvas id="expensePieChart" style="max-height:280px"></canvas>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-md-7">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-muted mb-3">@_selectedYear 年月收支趨勢</h6>
+                    <canvas id="trendBarChart" style="max-height:280px"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (_budgetRows.Count > 0)
+    {
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <h6 class="card-title text-muted mb-3">
+                    本月預算進度
+                    <a href="/budgets" class="btn btn-outline-secondary btn-sm ms-2">管理</a>
+                </h6>
+                <div class="row g-3">
+                    @foreach (var row in _budgetRows)
+                    {
+                        var pct = row.Budget > 0 ? (double)(row.Spent / row.Budget * 100) : 0;
+                        var clamp = Math.Min(pct, 100);
+                        var barClass = pct >= 100 ? "bg-danger" : pct >= 80 ? "bg-warning" : "bg-success";
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between mb-1">
+                                <small class="fw-medium">@row.Name</small>
+                                <small class="text-muted">@row.Spent.ToString("N0") / @row.Budget.ToString("N0")</small>
+                            </div>
+                            <div class="progress" style="height:8px">
+                                <div class="progress-bar @barClass" style="width:@clamp%"></div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
 
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="mb-0">最近 5 筆記錄</h5>
@@ -89,20 +171,66 @@ else
     private decimal _expense;
     private decimal _balance;
     private List<Transaction> _recent = [];
+    private List<(int CategoryId, string Name, decimal Amount)> _expenseByCategory = [];
+    private List<(int Month, decimal Income, decimal Expense)> _monthlyTrend = [];
+    private List<(string Name, decimal Budget, decimal Spent)> _budgetRows = [];
     private bool _isLoading = true;
+    private bool _shouldInitCharts = false;
     private string _userId = string.Empty;
+    private int _selectedYear = DateTime.Now.Year;
+    private int _selectedMonth = DateTime.Now.Month;
+    private int _generatedCount = 0;
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         _userId = authState.User.FindFirst(
             System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+        _generatedCount = await RecurringService.GenerateForCurrentMonthAsync(_userId);
+        await LoadData();
+    }
 
-        var now = DateTime.Now;
-        _income = await TransactionService.GetMonthlyIncomeAsync(_userId, now.Month, now.Year);
-        _expense = await TransactionService.GetMonthlyExpenseAsync(_userId, now.Month, now.Year);
+    private async Task LoadData()
+    {
+        _isLoading = true;
+        _income = await TransactionService.GetMonthlyIncomeAsync(_userId, _selectedMonth, _selectedYear);
+        _expense = await TransactionService.GetMonthlyExpenseAsync(_userId, _selectedMonth, _selectedYear);
         _balance = _income - _expense;
         _recent = await TransactionService.GetRecentAsync(_userId, 5);
+        _expenseByCategory = await TransactionService.GetExpenseByCategoryAsync(_userId, _selectedMonth, _selectedYear);
+        _monthlyTrend = await TransactionService.GetMonthlyTrendAsync(_userId, _selectedYear);
+
+        var budgets = await BudgetService.GetByUserAsync(_userId);
+        var spendingDict = _expenseByCategory.ToDictionary(x => x.CategoryId, x => x.Amount);
+        _budgetRows = budgets
+            .Select(b => (b.Category.Name, b.Amount, spendingDict.GetValueOrDefault(b.CategoryId, 0m)))
+            .ToList();
+
         _isLoading = false;
+        _shouldInitCharts = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_shouldInitCharts)
+        {
+            _shouldInitCharts = false;
+            await InitChartsAsync();
+        }
+    }
+
+    private async Task InitChartsAsync()
+    {
+        if (_expenseByCategory.Count > 0)
+        {
+            var labels = _expenseByCategory.Select(x => x.Name).ToArray();
+            var data = _expenseByCategory.Select(x => (double)x.Amount).ToArray();
+            await JS.InvokeVoidAsync("initDoughnutChart", "expensePieChart", labels, data);
+        }
+
+        var months = new[] { "1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月" };
+        var incomeData = _monthlyTrend.Select(x => (double)x.Income).ToArray();
+        var expenseData = _monthlyTrend.Select(x => (double)x.Expense).ToArray();
+        await JS.InvokeVoidAsync("initBarChart", "trendBarChart", months, incomeData, expenseData);
     }
 }

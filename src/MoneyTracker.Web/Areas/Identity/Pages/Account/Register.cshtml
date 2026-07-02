@@ -1,0 +1,36 @@
+@page
+@model RegisterModel
+@{
+    ViewData["Title"] = "註冊";
+}
+
+<h2 class="auth-title">建立帳號</h2>
+<p class="auth-subtitle">開始記錄您的每一筆收支</p>
+
+<form method="post">
+    <div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
+
+    <div class="mb-3">
+        <label asp-for="Input.Email" class="form-label">電子郵件</label>
+        <input asp-for="Input.Email" class="form-control" placeholder="name@example.com" autocomplete="email" />
+        <span asp-validation-for="Input.Email" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Input.Password" class="form-label">密碼</label>
+        <input asp-for="Input.Password" class="form-control" placeholder="至少 6 個字元" autocomplete="new-password" />
+        <span asp-validation-for="Input.Password" class="text-danger"></span>
+    </div>
+
+    <div class="mb-4">
+        <label asp-for="Input.ConfirmPassword" class="form-label">確認密碼</label>
+        <input asp-for="Input.ConfirmPassword" class="form-control" placeholder="再次輸入密碼" autocomplete="new-password" />
+        <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn-auth">建立帳號</button>
+</form>
+
+<div class="auth-footer">
+    已有帳號？<a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl">立即登入</a>
+</div>

@@ -13,6 +13,12 @@ public class Transaction
     [MaxLength(200)]
     public string? Description { get; set; }
 
+    [MaxLength(500)]
+    public string? Notes { get; set; }
+
+    [MaxLength(500)]
+    public string? ReceiptPath { get; set; }
+
     [Required]
     public DateTime Date { get; set; }
 

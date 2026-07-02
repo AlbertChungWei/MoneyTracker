@@ -9,6 +9,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
 {
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<Category> Categories => Set<Category>();
+    public DbSet<Budget> Budgets => Set<Budget>();
+    public DbSet<RecurringTransaction> RecurringTransactions => Set<RecurringTransaction>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -37,6 +39,33 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
              .WithMany(u => u.Categories)
              .HasForeignKey(c => c.UserId)
              .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<RecurringTransaction>(e =>
+        {
+            e.Property(r => r.Amount).HasPrecision(18, 2);
+            e.HasOne(r => r.User)
+             .WithMany()
+             .HasForeignKey(r => r.UserId)
+             .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(r => r.Category)
+             .WithMany()
+             .HasForeignKey(r => r.CategoryId)
+             .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<Budget>(e =>
+        {
+            e.Property(b => b.Amount).HasPrecision(18, 2);
+            e.HasOne(b => b.User)
+             .WithMany()
+             .HasForeignKey(b => b.UserId)
+             .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(b => b.Category)
+             .WithMany()
+             .HasForeignKey(b => b.CategoryId)
+             .OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(b => new { b.UserId, b.CategoryId }).IsUnique();
         });
     }
 }

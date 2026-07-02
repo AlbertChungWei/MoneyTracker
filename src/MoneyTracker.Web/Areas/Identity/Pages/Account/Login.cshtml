@@ -1,0 +1,30 @@
+@page
+@model LoginModel
+@{
+    ViewData["Title"] = "登入";
+}
+
+<h2 class="auth-title">歡迎回來</h2>
+<p class="auth-subtitle">請輸入您的帳號資訊</p>
+
+<form method="post">
+    <div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
+
+    <div class="mb-3">
+        <label asp-for="Input.Email" class="form-label">電子郵件</label>
+        <input asp-for="Input.Email" class="form-control" placeholder="name@example.com" autocomplete="email" />
+        <span asp-validation-for="Input.Email" class="text-danger"></span>
+    </div>
+
+    <div class="mb-4">
+        <label asp-for="Input.Password" class="form-label">密碼</label>
+        <input asp-for="Input.Password" class="form-control" placeholder="••••••••" autocomplete="current-password" />
+        <span asp-validation-for="Input.Password" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn-auth">登入</button>
+</form>
+
+<div class="auth-footer">
+    還沒有帳號？<a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">立即註冊</a>
+</div>

@@ -7,6 +7,7 @@
 @inject ICategoryService CategoryService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
+@inject IWebHostEnvironment WebHostEnv
 
 <PageTitle>@(_isEditMode ? "編輯收支" : "新增收支")</PageTitle>
 
@@ -79,11 +80,54 @@ else
                     <ValidationMessage For="() => _model.Description" />
                 </div>
 
+                <div class="mb-3">
+                    <label class="form-label">備註（選填）</label>
+                    <InputTextArea class="form-control" @bind-Value="_model.Notes" rows="2" placeholder="可記錄額外說明..." />
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">收據照片（選填）</label>
+                    @if (!string.IsNullOrEmpty(_existingReceiptPath) && _selectedFile is null)
+                    {
+                        <div class="mb-2">
+                            <img src="@_existingReceiptPath" class="img-thumbnail" style="max-height:120px;cursor:pointer"
+                                 @onclick="() => _showReceiptModal = true" title="點擊放大" />
+                            <button type="button" class="btn btn-link btn-sm text-danger p-0 ms-2"
+                                    @onclick="() => _clearReceipt = true">移除照片</button>
+                        </div>
+                    }
+                    @if (!_clearReceipt)
+                    {
+                        <InputFile OnChange="OnReceiptSelected" accept="image/*" class="form-control" />
+                    }
+                    @if (_selectedFile is not null)
+                    {
+                        <small class="text-muted">已選擇：@_selectedFile.Name（@(_selectedFile.Size / 1024) KB）</small>
+                    }
+                    @if (_uploadError is not null)
+                    {
+                        <div class="text-danger small">@_uploadError</div>
+                    }
+                </div>
+
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">儲存</button>
+                    <button type="submit" class="btn btn-primary" disabled="@_isSaving">
+                        @(_isSaving ? "儲存中..." : "儲存")
+                    </button>
                     <a href="/transactions" class="btn btn-outline-secondary">取消</a>
                 </div>
             </EditForm>
+        </div>
+    </div>
+}
+
+@if (_showReceiptModal && !string.IsNullOrEmpty(_existingReceiptPath))
+{
+    <div class="modal d-block" tabindex="-1" style="background:rgba(0,0,0,0.7)" @onclick="() => _showReceiptModal = false">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-transparent border-0">
+                <img src="@_existingReceiptPath" class="img-fluid rounded" />
+            </div>
         </div>
     </div>
 }
@@ -95,8 +139,14 @@ else
     private List<Category> _allCategories = [];
     private List<Category> _filteredCategories = [];
     private bool _isLoading = true;
+    private bool _isSaving = false;
     private bool _isEditMode => Id.HasValue;
     private string _userId = string.Empty;
+    private IBrowserFile? _selectedFile;
+    private string? _existingReceiptPath;
+    private bool _clearReceipt = false;
+    private bool _showReceiptModal = false;
+    private string? _uploadError;
 
     protected override async Task OnInitializedAsync()
     {
@@ -115,10 +165,12 @@ else
                 {
                     Amount = existing.Amount,
                     Description = existing.Description,
+                    Notes = existing.Notes,
                     Date = existing.Date,
                     Type = existing.Type,
                     CategoryId = existing.CategoryId
                 };
+                _existingReceiptPath = existing.ReceiptPath;
             }
         }
 
@@ -140,8 +192,53 @@ else
             .ToList();
     }
 
+    private void OnReceiptSelected(InputFileChangeEventArgs e)
+    {
+        _uploadError = null;
+        var file = e.File;
+        if (file.Size > 5 * 1024 * 1024)
+        {
+            _uploadError = "照片大小不能超過 5MB";
+            return;
+        }
+        _selectedFile = file;
+    }
+
+    private async Task<string?> SaveReceiptAsync()
+    {
+        if (_clearReceipt)
+        {
+            if (!string.IsNullOrEmpty(_existingReceiptPath))
+            {
+                var oldFullPath = Path.Combine(WebHostEnv.WebRootPath, _existingReceiptPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (File.Exists(oldFullPath)) File.Delete(oldFullPath);
+            }
+            return null;
+        }
+
+        if (_selectedFile is null) return _existingReceiptPath;
+
+        var uploadsDir = Path.Combine(WebHostEnv.WebRootPath, "uploads", _userId);
+        Directory.CreateDirectory(uploadsDir);
+
+        var ext = Path.GetExtension(_selectedFile.Name).ToLower();
+        var filename = $"{Guid.NewGuid()}{ext}";
+        var fullPath = Path.Combine(uploadsDir, filename);
+
+        using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+        using var fs = File.Create(fullPath);
+        await stream.CopyToAsync(fs);
+
+        return $"/uploads/{_userId}/{filename}";
+    }
+
     private async Task HandleSubmit()
     {
+        if (_uploadError is not null) return;
+        _isSaving = true;
+
+        var receiptPath = await SaveReceiptAsync();
+
         if (_isEditMode && Id.HasValue)
         {
             var existing = await TransactionService.GetByIdAsync(Id.Value, _userId);
@@ -149,9 +246,11 @@ else
             {
                 existing.Amount = _model.Amount;
                 existing.Description = _model.Description;
+                existing.Notes = _model.Notes;
                 existing.Date = _model.Date;
                 existing.Type = _model.Type;
                 existing.CategoryId = _model.CategoryId;
+                existing.ReceiptPath = receiptPath;
                 await TransactionService.UpdateAsync(existing);
             }
         }
@@ -161,10 +260,12 @@ else
             {
                 Amount = _model.Amount,
                 Description = _model.Description,
+                Notes = _model.Notes,
                 Date = _model.Date,
                 Type = _model.Type,
                 CategoryId = _model.CategoryId,
-                UserId = _userId
+                UserId = _userId,
+                ReceiptPath = receiptPath
             };
             await TransactionService.CreateAsync(transaction);
         }
@@ -180,6 +281,9 @@ else
 
         [System.ComponentModel.DataAnnotations.MaxLength(200)]
         public string? Description { get; set; }
+
+        [System.ComponentModel.DataAnnotations.MaxLength(500)]
+        public string? Notes { get; set; }
 
         [System.ComponentModel.DataAnnotations.Required]
         public DateTime Date { get; set; } = DateTime.Today;

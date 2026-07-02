@@ -7,7 +7,7 @@ namespace MoneyTracker.Web.Services;
 public class TransactionService(AppDbContext db) : ITransactionService
 {
     public async Task<List<Transaction>> GetByUserAsync(
-        string userId, int? month, int? year, int? categoryId)
+        string userId, int? month, int? year, int? categoryId, string? keyword = null)
     {
         var query = db.Transactions
             .AsNoTracking()
@@ -20,6 +20,8 @@ public class TransactionService(AppDbContext db) : ITransactionService
             query = query.Where(t => t.Date.Month == month.Value);
         if (categoryId.HasValue)
             query = query.Where(t => t.CategoryId == categoryId.Value);
+        if (!string.IsNullOrWhiteSpace(keyword))
+            query = query.Where(t => t.Description.Contains(keyword));
 
         return await query.OrderByDescending(t => t.Date).ToListAsync();
     }
@@ -76,4 +78,47 @@ public class TransactionService(AppDbContext db) : ITransactionService
             .OrderByDescending(t => t.Date)
             .Take(count)
             .ToListAsync();
+
+    public async Task<List<(int CategoryId, string Name, decimal Amount)>> GetExpenseByCategoryAsync(
+        string userId, int month, int year)
+    {
+        var raw = await db.Transactions
+            .AsNoTracking()
+            .Where(t => t.UserId == userId
+                     && t.Type == TransactionType.Expense
+                     && t.Date.Month == month
+                     && t.Date.Year == year)
+            .GroupBy(t => t.CategoryId)
+            .Select(g => new { CategoryId = g.Key, Amount = g.Sum(t => t.Amount) })
+            .OrderByDescending(x => x.Amount)
+            .ToListAsync();
+
+        if (raw.Count == 0) return [];
+
+        var catIds = raw.Select(r => r.CategoryId).ToList();
+        var cats = await db.Categories.AsNoTracking()
+            .Where(c => catIds.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id, c => c.Name);
+
+        return raw
+            .Select(r => (r.CategoryId, cats.GetValueOrDefault(r.CategoryId, "未知"), r.Amount))
+            .ToList();
+    }
+
+    public async Task<List<(int Month, decimal Income, decimal Expense)>> GetMonthlyTrendAsync(
+        string userId, int year)
+    {
+        var data = await db.Transactions
+            .AsNoTracking()
+            .Where(t => t.UserId == userId && t.Date.Year == year)
+            .Select(t => new { t.Date.Month, t.Type, t.Amount })
+            .ToListAsync();
+
+        return Enumerable.Range(1, 12).Select(m =>
+        (
+            m,
+            data.Where(t => t.Month == m && t.Type == TransactionType.Income).Sum(t => t.Amount),
+            data.Where(t => t.Month == m && t.Type == TransactionType.Expense).Sum(t => t.Amount)
+        )).ToList();
+    }
 }
