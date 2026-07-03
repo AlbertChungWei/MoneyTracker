@@ -26,15 +26,15 @@ else if (_rows.Count == 0)
 else
 {
     <div class="card border-0 shadow-sm">
-        <div class="card-body p-0">
+        <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
                         <th class="ps-4">支出類別</th>
-                        <th style="width:200px">月預算 (元)</th>
+                        <th>月預算 (元)</th>
                         <th>本月已用</th>
                         <th>使用率</th>
-                        <th class="pe-4" style="width:80px"></th>
+                        <th class="pe-4"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -49,12 +49,12 @@ else
                                 <input type="number" class="form-control form-control-sm"
                                        min="0" step="100"
                                        @bind="row.InputAmount"
-                                       style="width:160px" />
+                                       style="min-width:120px" />
                             </td>
-                            <td class="align-middle text-danger fw-medium">
+                            <td class="align-middle text-danger fw-medium text-nowrap">
                                 @row.Spent.ToString("N0") 元
                             </td>
-                            <td class="align-middle" style="min-width:180px">
+                            <td class="align-middle" style="min-width:160px">
                                 @if (row.Budget > 0)
                                 {
                                     <div class="d-flex align-items-center gap-2">
