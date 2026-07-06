@@ -12,6 +12,12 @@ function downloadCsv(filename, content) {
 
 window._charts = {};
 
+// 深色主題：圖表文字與格線改為淺色
+if (window.Chart) {
+    Chart.defaults.color = 'rgba(255, 255, 255, 0.75)';
+    Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.12)';
+}
+
 function initDoughnutChart(canvasId, labels, data) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;

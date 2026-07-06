@@ -1,0 +1,558 @@
+/* ============================================================
+   MoneyTracker 深色玻璃主題 (Dark Glass Theme)
+   以 Bootstrap class 選擇器覆寫外觀，頁面 markup 不需改動。
+   ============================================================ */
+
+:root {
+    --mt-bg-1: #1a1a2e;
+    --mt-bg-2: #16213e;
+    --mt-bg-3: #0f3460;
+
+    --mt-accent-1: #667eea;
+    --mt-accent-2: #764ba2;
+    --mt-accent-link: #a78bfa;
+
+    --mt-glass: rgba(255, 255, 255, 0.05);
+    --mt-glass-2: rgba(255, 255, 255, 0.08);
+    --mt-glass-3: rgba(255, 255, 255, 0.12);
+    --mt-border: rgba(255, 255, 255, 0.12);
+    --mt-border-strong: rgba(255, 255, 255, 0.18);
+
+    --mt-text: #f1f1f5;
+    --mt-text-muted: rgba(255, 255, 255, 0.55);
+    --mt-text-dim: rgba(255, 255, 255, 0.38);
+
+    --mt-success: #34d399;
+    --mt-danger: #f87171;
+    --mt-warning: #fbbf24;
+    --mt-info: #60a5fa;
+
+    --mt-radius: 16px;
+    --mt-radius-sm: 10px;
+    --mt-bottom-nav-h: 4.25rem;
+}
+
+/* ---------- 全域背景與文字 ---------- */
+html, body {
+    min-height: 100vh;
+    font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, var(--mt-bg-1) 0%, var(--mt-bg-2) 40%, var(--mt-bg-3) 100%);
+    background-attachment: fixed;
+    color: var(--mt-text);
+
+    /* 讓 Bootstrap 元件跟著變深色 */
+    --bs-body-bg: transparent;
+    --bs-body-color: var(--mt-text);
+    --bs-secondary-color: var(--mt-text-muted);
+    --bs-emphasis-color: #fff;
+    --bs-border-color: var(--mt-border);
+    --bs-heading-color: var(--mt-text);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--mt-text);
+}
+
+a {
+    color: var(--mt-accent-link);
+}
+
+a:hover {
+    color: #c4b5fd;
+}
+
+.text-muted {
+    color: var(--mt-text-muted) !important;
+}
+
+.text-success { color: var(--mt-success) !important; }
+.text-danger  { color: var(--mt-danger) !important; }
+.text-primary { color: #93c5fd !important; }
+.text-warning { color: var(--mt-warning) !important; }
+
+/* ---------- 卡片 (glass) ---------- */
+.card {
+    background: var(--mt-glass);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--mt-border);
+    border-radius: var(--mt-radius);
+    color: var(--mt-text);
+}
+
+.card.shadow-sm,
+.card.shadow {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28) !important;
+}
+
+.card-header {
+    background: var(--mt-glass-2) !important;
+    border-bottom: 1px solid var(--mt-border);
+    color: var(--mt-text) !important;
+}
+
+.card-title {
+    color: var(--mt-text-muted);
+}
+
+/* ---------- 表格 ---------- */
+.table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--mt-text);
+    --bs-table-border-color: var(--mt-border);
+    --bs-table-hover-bg: rgba(255, 255, 255, 0.06);
+    --bs-table-hover-color: #fff;
+    --bs-table-striped-bg: rgba(255, 255, 255, 0.03);
+    --bs-table-striped-color: var(--mt-text);
+    color: var(--mt-text);
+}
+
+.table > :not(caption) > * > * {
+    border-bottom-color: var(--mt-border);
+}
+
+.table-light,
+.table .table-light,
+thead.table-light,
+tfoot.table-light {
+    --bs-table-bg: rgba(255, 255, 255, 0.07);
+    --bs-table-color: var(--mt-text);
+    color: var(--mt-text);
+}
+
+.table-light th,
+.table-light td {
+    background: rgba(255, 255, 255, 0.07) !important;
+    color: var(--mt-text) !important;
+    border-color: var(--mt-border) !important;
+}
+
+/* ---------- 表單元件 ---------- */
+.form-label {
+    color: var(--mt-text-muted);
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.form-control,
+.form-select {
+    background: var(--mt-glass);
+    border: 1px solid var(--mt-border-strong);
+    border-radius: var(--mt-radius-sm);
+    color: var(--mt-text);
+}
+
+.form-control:focus,
+.form-select:focus {
+    background: var(--mt-glass-2);
+    border-color: var(--mt-accent-1);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.25);
+    color: var(--mt-text);
+}
+
+.form-control::placeholder {
+    color: var(--mt-text-dim);
+}
+
+/* select 下拉選項在深色背景需指定深色底 (原生渲染) */
+.form-select option {
+    background: var(--mt-bg-2);
+    color: var(--mt-text);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--mt-text-dim);
+}
+
+.form-check-input {
+    background-color: var(--mt-glass-2);
+    border-color: var(--mt-border-strong);
+}
+
+.form-check-input:checked {
+    background-color: var(--mt-accent-1);
+    border-color: var(--mt-accent-1);
+}
+
+.form-check-input:focus {
+    border-color: var(--mt-accent-1);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.25);
+}
+
+.form-text {
+    color: var(--mt-text-muted);
+}
+
+.input-group-text {
+    background: var(--mt-glass-2);
+    border-color: var(--mt-border-strong);
+    color: var(--mt-text-muted);
+}
+
+/* 覆寫 app.css 針對淺色設計的 focus 白框 */
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus,
+.form-control:focus, .form-check-input:focus {
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3) !important;
+}
+
+/* Blazor 驗證狀態 */
+.valid.modified:not([type=checkbox]) {
+    outline: 1px solid var(--mt-success);
+}
+
+.invalid {
+    outline: 1px solid var(--mt-danger);
+}
+
+.validation-message,
+.text-danger {
+    color: var(--mt-danger) !important;
+}
+
+/* ---------- 按鈕 ---------- */
+.btn-primary {
+    background: linear-gradient(135deg, var(--mt-accent-1), var(--mt-accent-2));
+    border: none;
+    color: #fff;
+    font-weight: 600;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background: linear-gradient(135deg, #7288ee, #8358b0);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-primary:disabled {
+    background: linear-gradient(135deg, var(--mt-accent-1), var(--mt-accent-2));
+    opacity: 0.55;
+}
+
+.btn-outline-secondary {
+    color: var(--mt-text-muted);
+    border-color: var(--mt-border-strong);
+}
+
+.btn-outline-secondary:hover {
+    background: var(--mt-glass-2);
+    border-color: var(--mt-border-strong);
+    color: #fff;
+}
+
+.btn-outline-primary {
+    color: var(--mt-accent-link);
+    border-color: rgba(167, 139, 250, 0.5);
+}
+
+.btn-outline-primary:hover {
+    background: rgba(167, 139, 250, 0.15);
+    border-color: var(--mt-accent-link);
+    color: #fff;
+}
+
+.btn-outline-danger {
+    color: var(--mt-danger);
+    border-color: rgba(248, 113, 113, 0.5);
+}
+
+.btn-outline-danger:hover {
+    background: rgba(248, 113, 113, 0.15);
+    border-color: var(--mt-danger);
+    color: #fff;
+}
+
+.btn-link {
+    color: var(--mt-accent-link);
+}
+
+.btn-close {
+    filter: invert(1) grayscale(1) brightness(1.6);
+}
+
+/* ---------- 進度條 ---------- */
+.progress {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+}
+
+.progress-bar.bg-success { background: var(--mt-success) !important; }
+.progress-bar.bg-warning { background: var(--mt-warning) !important; }
+.progress-bar.bg-danger  { background: var(--mt-danger) !important; }
+
+/* ---------- 提示訊息 ---------- */
+.alert {
+    border-radius: var(--mt-radius-sm);
+    border: 1px solid var(--mt-border);
+    background: var(--mt-glass-2);
+    color: var(--mt-text);
+}
+
+.alert-info {
+    background: rgba(96, 165, 250, 0.15);
+    border-color: rgba(96, 165, 250, 0.3);
+    color: #bfdbfe;
+}
+
+.alert-warning {
+    background: rgba(251, 191, 36, 0.15);
+    border-color: rgba(251, 191, 36, 0.3);
+    color: #fde68a;
+}
+
+.alert-danger {
+    background: rgba(248, 113, 113, 0.15);
+    border-color: rgba(248, 113, 113, 0.3);
+    color: #fecaca;
+}
+
+/* ---------- Modal ---------- */
+.modal-content {
+    background: rgba(26, 26, 46, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--mt-border-strong);
+    border-radius: var(--mt-radius);
+    color: var(--mt-text);
+}
+
+.modal-header,
+.modal-footer {
+    border-color: var(--mt-border);
+}
+
+/* ---------- Badge ---------- */
+.badge.bg-success { background: var(--mt-success) !important; color: #06281c; }
+.badge.bg-danger  { background: var(--mt-danger) !important; color: #3a0d0d; }
+.badge.bg-secondary {
+    background: var(--mt-glass-3) !important;
+    color: var(--mt-text);
+}
+
+/* ---------- 雜項覆寫 ---------- */
+.bg-white {
+    background: var(--mt-glass-2) !important;
+    color: var(--mt-text) !important;
+}
+
+hr {
+    border-color: var(--mt-border);
+    opacity: 1;
+}
+
+.img-thumbnail {
+    background: var(--mt-glass);
+    border-color: var(--mt-border-strong);
+}
+
+/* ============================================================
+   手機底部導覽列 (Bottom Navigation)
+   置於全域：因 NavLink 渲染的 <a> 不會套用元件 scoped CSS
+   ============================================================ */
+.bottom-nav,
+.bn-overlay,
+.bn-sheet,
+.bn-more-toggle {
+    display: none;
+}
+
+@media (max-width: 640.98px) {
+    .bn-more-toggle {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .bottom-nav {
+        display: flex;
+        justify-content: space-around;
+        align-items: flex-end;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1030;
+        height: var(--mt-bottom-nav-h, 4.25rem);
+        padding: 0.4rem 0.4rem calc(0.4rem + env(safe-area-inset-bottom, 0px));
+        background: rgba(20, 20, 38, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    .bottom-nav .bn-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.15rem;
+        height: 100%;
+        padding: 0.35rem 0 0;
+        color: rgba(255, 255, 255, 0.55);
+        text-decoration: none;
+        cursor: pointer;
+        border-radius: 12px;
+        transition: color .15s;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .bottom-nav .bn-ico {
+        font-size: 1.25rem;
+        line-height: 1.1;
+    }
+
+    .bottom-nav .bn-label {
+        font-size: 0.68rem;
+        font-weight: 600;
+        line-height: 1;
+    }
+
+    /* NavLink 目前頁面高亮 */
+    .bottom-nav a.bn-item.active {
+        color: #fff;
+    }
+
+    .bottom-nav a.bn-item.active .bn-ico {
+        transform: translateY(-1px);
+        filter: drop-shadow(0 3px 8px rgba(102, 126, 234, 0.7));
+    }
+
+    /* 中央「新增」凸起主按鈕 */
+    .bottom-nav .bn-item-add {
+        color: #fff;
+        justify-content: flex-end;
+    }
+
+    .bottom-nav .bn-add-btn {
+        width: 3.1rem;
+        height: 3.1rem;
+        flex-shrink: 0;
+        box-sizing: border-box;
+        margin-bottom: 0.15rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.7rem;
+        font-weight: 300;
+        color: #fff;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border: 3px solid rgba(20, 20, 38, 0.9);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.55);
+    }
+
+    .bottom-nav a.bn-item-add.active .bn-add-btn {
+        background: linear-gradient(135deg, #7c92f5, #8a63bd);
+    }
+
+    /* 「更多」彈出面板 */
+    .bn-overlay {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 1035;
+        background: rgba(0, 0, 0, 0);
+        visibility: hidden;
+        transition: background .2s;
+    }
+
+    .bn-sheet {
+        display: block;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1040;
+        padding: 0.5rem 1rem calc(1.25rem + env(safe-area-inset-bottom, 0px));
+        background: rgba(26, 26, 46, 0.96);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border-top: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 22px 22px 0 0;
+        box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.5);
+        transform: translateY(110%);
+        transition: transform .28s cubic-bezier(.4, 0, .2, 1);
+    }
+
+    .bn-sheet-handle {
+        width: 42px;
+        height: 4px;
+        margin: 0.35rem auto 0.85rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.25);
+    }
+
+    .bn-sheet-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.85rem 0.75rem;
+        border-radius: 12px;
+        color: rgba(255, 255, 255, 0.85);
+        text-decoration: none;
+        font-size: 0.95rem;
+        font-weight: 500;
+    }
+
+    .bn-sheet-item:active {
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .bn-sheet-logout {
+        color: #fecaca;
+    }
+
+    .bn-sheet-ico {
+        font-size: 1.15rem;
+        width: 1.5rem;
+        text-align: center;
+    }
+
+    .bn-sheet-user {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.6rem 0.75rem;
+        font-size: 0.82rem;
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .bn-sheet-divider {
+        height: 1px;
+        margin: 0.5rem 0.25rem;
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .bn-more-toggle:checked ~ .bn-overlay {
+        background: rgba(0, 0, 0, 0.5);
+        visibility: visible;
+    }
+
+    .bn-more-toggle:checked ~ .bn-sheet {
+        transform: translateY(0);
+    }
+}
+
+/* 捲動條 (深色) */
+* {
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
