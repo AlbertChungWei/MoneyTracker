@@ -114,5 +114,3 @@ x86/
 
 # Publish Web Output
 *.[Pp]ublish.xml
-# Local dev secrets
-src/MoneyTracker.Web/appsettings.Development.json
