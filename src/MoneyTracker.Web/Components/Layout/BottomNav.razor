@@ -1,0 +1,52 @@
+<input type="checkbox" id="mtMoreToggle" class="bn-more-toggle" />
+
+<label for="mtMoreToggle" class="bn-overlay"></label>
+
+<div class="bn-sheet">
+    <div class="bn-sheet-handle"></div>
+    <a class="bn-sheet-item" href="categories" onclick="document.getElementById('mtMoreToggle').checked=false">
+        <span class="bn-sheet-ico">🏷️</span> 類別管理
+    </a>
+    <a class="bn-sheet-item" href="recurring" onclick="document.getElementById('mtMoreToggle').checked=false">
+        <span class="bn-sheet-ico">🔁</span> 週期性收支
+    </a>
+    <div class="bn-sheet-divider"></div>
+    <AuthorizeView>
+        <Authorized>
+            <div class="bn-sheet-user">
+                <span class="bn-sheet-ico">👤</span> @context.User.Identity?.Name
+            </div>
+            <a class="bn-sheet-item bn-sheet-logout" href="/Identity/Account/Logout">
+                <span class="bn-sheet-ico">🚪</span> 登出
+            </a>
+        </Authorized>
+        <NotAuthorized>
+            <a class="bn-sheet-item" href="/Identity/Account/Login">
+                <span class="bn-sheet-ico">🔑</span> 登入
+            </a>
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
+
+<nav class="bottom-nav">
+    <NavLink class="bn-item" href="" Match="NavLinkMatch.All">
+        <span class="bn-ico">📊</span>
+        <span class="bn-label">概覽</span>
+    </NavLink>
+    <NavLink class="bn-item" href="transactions">
+        <span class="bn-ico">📒</span>
+        <span class="bn-label">帳本</span>
+    </NavLink>
+    <NavLink class="bn-item bn-item-add" href="add">
+        <span class="bn-add-btn">＋</span>
+        <span class="bn-label">新增</span>
+    </NavLink>
+    <NavLink class="bn-item" href="budgets">
+        <span class="bn-ico">💵</span>
+        <span class="bn-label">預算</span>
+    </NavLink>
+    <label class="bn-item bn-item-more" for="mtMoreToggle">
+        <span class="bn-ico">☰</span>
+        <span class="bn-label">更多</span>
+    </label>
+</nav>

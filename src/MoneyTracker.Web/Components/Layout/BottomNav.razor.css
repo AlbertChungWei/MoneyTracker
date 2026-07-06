@@ -1,0 +1,3 @@
+/* 底部導覽列樣式已移至全域 wwwroot/theme.css
+   原因：NavLink 渲染的 <a> 不會套用元件 scoped CSS 的 scope 屬性，
+   需以全域樣式才能正確套用 flex 排版與高亮狀態。 */

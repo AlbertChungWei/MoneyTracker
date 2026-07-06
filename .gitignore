@@ -114,3 +114,6 @@ x86/
 
 # Publish Web Output
 *.[Pp]ublish.xml
+
+# 本機開發設定（含機密連線字串，不進版控）
+src/MoneyTracker.Web/appsettings.Development.json

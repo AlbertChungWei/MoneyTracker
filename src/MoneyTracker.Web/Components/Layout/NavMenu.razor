@@ -1,66 +1,65 @@
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">MoneyTracker</a>
+<div class="nav-brand">
+    <span class="nav-brand-icon">💰</span>
+    <div>
+        <div class="nav-brand-name">MoneyTracker</div>
+        <div class="nav-brand-sub">個人收支管理</div>
     </div>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
-
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+<div class="nav-scrollable">
     <nav class="nav flex-column">
-        <div class="nav-item px-3">
+        <div class="nav-item">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                Dashboard
+                <span class="nav-ico">📊</span> 收支概覽
             </NavLink>
         </div>
-
-        <div class="nav-item px-3">
+        <div class="nav-item">
             <NavLink class="nav-link" href="transactions">
-                我的帳本
+                <span class="nav-ico">📒</span> 我的帳本
             </NavLink>
         </div>
-
-        <div class="nav-item px-3">
+        <div class="nav-item">
             <NavLink class="nav-link" href="add">
-                新增收支
+                <span class="nav-ico">➕</span> 新增收支
             </NavLink>
         </div>
-
-        <div class="nav-item px-3">
+        <div class="nav-item">
             <NavLink class="nav-link" href="categories">
-                類別管理
+                <span class="nav-ico">🏷️</span> 類別管理
             </NavLink>
         </div>
-
-        <div class="nav-item px-3">
+        <div class="nav-item">
             <NavLink class="nav-link" href="budgets">
-                預算管理
+                <span class="nav-ico">💵</span> 預算管理
             </NavLink>
         </div>
-
-        <div class="nav-item px-3">
+        <div class="nav-item">
             <NavLink class="nav-link" href="recurring">
-                週期性收支
+                <span class="nav-ico">🔁</span> 週期性收支
             </NavLink>
         </div>
-
-        <AuthorizeView>
-            <Authorized>
-                <div class="nav-item px-3 mt-3">
-                    <span class="nav-link text-muted small">@context.User.Identity?.Name</span>
-                </div>
-                <div class="nav-item px-3">
-                    <a class="nav-link" href="/Identity/Account/Logout">登出</a>
-                </div>
-            </Authorized>
-            <NotAuthorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/Identity/Account/Login">登入</NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="/Identity/Account/Register">註冊</NavLink>
-                </div>
-            </NotAuthorized>
-        </AuthorizeView>
     </nav>
 </div>
+
+<div class="nav-footer">
+    <AuthorizeView>
+        <Authorized>
+            <div class="nav-user">
+                <span class="nav-user-avatar">@(GetInitial(context.User.Identity?.Name))</span>
+                <span class="nav-user-name">@context.User.Identity?.Name</span>
+            </div>
+            <a class="nav-logout" href="/Identity/Account/Logout">登出</a>
+        </Authorized>
+        <NotAuthorized>
+            <a class="nav-logout" href="/Identity/Account/Login">登入</a>
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    private static string GetInitial(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        return name.Trim()[..1].ToUpperInvariant();
+    }
+}
