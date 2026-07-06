@@ -43,29 +43,30 @@
 else
 {
     <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body text-center">
-                    <p class="text-muted mb-1">本月收入</p>
-                    <h3 class="text-success fw-bold">@_income.ToString("N0") 元</h3>
+        <div class="col-4">
+            <div class="card border-0 h-100" style="background:#f0fdf4">
+                <div class="card-body text-center px-2">
+                    <p class="text-muted mb-1 small">本月收入</p>
+                    <div class="fw-bold text-success fs-5">@_income.ToString("N0")</div>
+                    <small class="text-muted">元</small>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body text-center">
-                    <p class="text-muted mb-1">本月支出</p>
-                    <h3 class="text-danger fw-bold">@_expense.ToString("N0") 元</h3>
+        <div class="col-4">
+            <div class="card border-0 h-100" style="background:#fff5f5">
+                <div class="card-body text-center px-2">
+                    <p class="text-muted mb-1 small">本月支出</p>
+                    <div class="fw-bold text-danger fs-5">@_expense.ToString("N0")</div>
+                    <small class="text-muted">元</small>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body text-center">
-                    <p class="text-muted mb-1">本月結餘</p>
-                    <h3 class="fw-bold @(_balance >= 0 ? "text-primary" : "text-danger")">
-                        @_balance.ToString("N0") 元
-                    </h3>
+        <div class="col-4">
+            <div class="card border-0 h-100" style="background:#eff6ff">
+                <div class="card-body text-center px-2">
+                    <p class="text-muted mb-1 small">本月結餘</p>
+                    <div class="fw-bold fs-5 @(_balance >= 0 ? "text-primary" : "text-danger")">@_balance.ToString("N0")</div>
+                    <small class="text-muted">元</small>
                 </div>
             </div>
         </div>
