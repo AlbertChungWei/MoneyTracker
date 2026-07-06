@@ -137,6 +137,7 @@ else
     }
     else
     {
+        <div class="table-responsive">
         <table class="table table-hover">
             <thead class="table-light">
                 <tr>
@@ -150,16 +151,17 @@ else
                 @foreach (var t in _recent)
                 {
                     <tr>
-                        <td>@t.Date.ToString("MM/dd")</td>
+                        <td class="text-nowrap">@t.Date.ToString("MM/dd")</td>
                         <td>@t.Category.Name</td>
                         <td>@t.Description</td>
-                        <td class="text-end @(t.Type == TransactionType.Income ? "text-success" : "text-danger")">
+                        <td class="text-end text-nowrap @(t.Type == TransactionType.Income ? "text-success" : "text-danger")">
                             @(t.Type == TransactionType.Income ? "+" : "-")@t.Amount.ToString("N0")
                         </td>
                     </tr>
                 }
             </tbody>
         </table>
+        </div>
         <div class="text-end">
             <a href="/transactions" class="btn btn-outline-secondary btn-sm">查看全部</a>
         </div>

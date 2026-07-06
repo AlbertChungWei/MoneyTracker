@@ -8,12 +8,12 @@
 
 <PageTitle>週期性收支</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-2">
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-2">
     <div>
         <h1 class="mb-1">週期性收支</h1>
         <p class="text-muted mb-0">設定固定收支項目，每月自動在 Dashboard 產生記錄。</p>
     </div>
-    <button class="btn btn-success" @onclick="GenerateNow" disabled="@_isGenerating">
+    <button class="btn btn-success flex-shrink-0" @onclick="GenerateNow" disabled="@_isGenerating">
         @(_isGenerating ? "產生中..." : "立即產生本月記錄")
     </button>
 </div>
